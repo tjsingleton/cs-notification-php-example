@@ -1,0 +1,40 @@
+#!/usr/bin/php
+<?php
+// https://developers.google.com/api-client-library/java/google-http-java-client/reference/1.20.0/com/google/api/client/util/Base64#encodeBase64URLSafe(byte[])
+function urlsafe_b64encode($string) {
+    $data = base64_encode($string);
+    $data = str_replace(array('+','/','='), array('-','_',''), $data);
+    return $data;
+}
+
+$sample_json = '{"company":"Example, Inc","pitchDetailsLink":"https://dev.clearslideng.com/manage/email/details?userVID=6YSZ9BBJWVM3H87PUAPE","senderEmail":"tester@clearslide.com","time":"Fri, 11/13/2015, 10:19 AM PST","recipients":["my@example.com"],"decks":["testing"]}';
+
+$api_endpoint = 'http://localhost/';
+
+$verb = "POST";
+$sha1 = base64_encode(sha1($sample_json));
+$content_type = "application/json; charset=UTF-8";
+$request_time = date("D, d M Y H:i:s T");
+$path = "?emailpitchsent";
+
+$to_sign = "$verb\n$sha1\n$content_type\n$request_time\n$path";
+$api_key = "apikey";
+$signature = urlsafe_b64encode(hash_hmac('sha256', $to_sign, $api_key, true));
+
+$ch = curl_init("$api_endpoint$path");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+// curl_setopt($ch, CURLOPT_VERBOSE, 1);
+curl_setopt($ch, CURLOPT_HEADER, 1);
+curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+ "CONTENT-TYPE: $content_type",
+ "HMAC: $signature",
+ "DATE: $request_time",
+ "SHA1: $sha1"
+));
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $sample_json);
+$result = curl_exec($ch);
+curl_close($ch);
+
+echo "To Sign: ". str_replace("\n", "\\n", $to_sign) ."\n\n";
+echo "Response: \n\n$result";
